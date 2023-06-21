@@ -1,0 +1,41 @@
+#include <msp430.h>
+
+int main(void){
+	WDTCTL = WDTPW | WDTHOLD;
+	PM5CTL0 &= ~LOCKLPM5;
+
+	P5DIR &= ~0x60; //pin 5.5 and 5.6 input pins
+	P5REN |= 0x60; //enable internal resistor for pin 5.5 and 5.6
+	P5OUT |= 0x60; //pull-up resistor (5.5 and 5.6)
+	P1DIR |= BIT0; //pin 1.0 red LED output
+	P8DIR |= BIT0; //pin 8.0 output
+	int maintain = 1;
+	int blinkme = 0;
+	TA1CCR0 = 2000; //about 250 Hz, period is 4 milli seconds, each increment is 2 micro seconds
+	//frequency is 1/ (n * 2 * (10^-6))
+	TA1CTL = TASSEL_2 | MC_1 | TACLR;
+	while(1){
+		if ((P5IN & 0x040) == 0){ //pin 5.6, S1
+			P1OUT |= 0x01; //set pin 1.0
+			maintain = 1; //allows clock to maintain generation
+		} 
+		else if ((P5IN & 0x20) == 0){ //pin 5.5, S2
+		maintain = 0; //stops clock generation
+		blinkme += 1;
+			if (blinkme >= 20000){ //pin 1.0 blink time
+			blinkme = 0;
+			P1OUT ^= BIT0; //toggle pin 1.0 LED
+			}
+		}
+		else{ //neither S1 or S2 pressed
+		P1OUT &= ~0x01; //clear P1.0
+		}
+		
+		if ((TA1CCTL0 & CCIFG & maintain)!= 0{ //clock through P8.0
+		P8OUT ^= BIT0;
+		TA1CCTL0 &= ~CCIFG;
+		}
+		
+	}
+	return (0);
+}
